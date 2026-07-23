@@ -2,7 +2,7 @@
 customtkinter==5.2.2
 
 # Firebase integration
-pyrebase4==4.9.4
+pyrebase4==4.9.0
 
 # Image processing
 Pillow==12.2.0
