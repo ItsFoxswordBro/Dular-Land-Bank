@@ -33,7 +33,7 @@ jobs:
         run: |
           pyinstaller --onefile --noconsole `
             --add-data "assets;assets" `
-            DularBankPrototype.py
+            DularLandBankPrototype.py
 
       - name: Create GitHub Release and Attach EXE
         uses: softprops/action-gh-release@v2
