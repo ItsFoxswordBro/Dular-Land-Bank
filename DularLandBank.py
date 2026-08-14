@@ -48,7 +48,7 @@ App_icon = ctk.CTkImage(light_image=raw_image, dark_image=raw_image, size=(root.
 window_bar_icon = ImageTk.PhotoImage(raw_image)
 root.after(200, lambda: root.iconphoto(False, window_bar_icon))
 INTER_FONT = register_inter_font()
-
+dulars = 0
 #idk what this does but it was in the tutorial so here we are i think it fills stuff to the screen or smt
 root.grid_rowconfigure(0, weight=1)
 root.grid_columnconfigure(0, weight=1)
@@ -81,12 +81,11 @@ def logout():
     except Exception as e:
         ctk.CTkLabel(logged_in_screen, text = 'An error occurred during logout.', font = (INTER_FONT, 16), text_color='#FF4444').pack(pady = 10)
     show_screen(home_screen)
-def login(email, password):
-    global user, logged_in_screen, login_email_entry, login_password_entry, login_error_label, is_verified, user_info
+def login(email2, password):
+    global user, logged_in_screen, login_email_entry, login_password_entry, login_error_label, is_verified, user_info, email, dulars
     try:
-        user = auth.sign_in_with_email_and_password(email, password)
+        user = auth.sign_in_with_email_and_password(email2, password)
         user_info = auth.get_account_info(user['idToken'])
-        user = auth.refresh(user['refreshToken'])
         login_error_label.configure(text='')
         is_verified = user_info['users'][0]['emailVerified']
         if is_verified:
@@ -95,8 +94,13 @@ def login(email, password):
             login_success_label = ctk.CTkLabel(logged_in_screen, text = 'Logged in successfully!', font = (INTER_FONT, 16), text_color='#44FF44')
             login_success_label.pack(pady = 10)
             root.after(2000, lambda: login_success_label.configure(text=''))
-        else:
+            email = email2
             login_error_label.configure(text='Email not verified or credentials not entered, if you cant find the email to verify your account, please check in your spam folder as well or please wait 3-7 days and try again. or contact support.', text_color='#FF4444')
+        try:
+            dulars = int(db.child(email.replace('.', ',')).child("dulars").get(token=user['idToken']).val())
+        except:
+            dulars = "?"
+
     except Exception as e:
         try:
             error_json = json.loads(e.args[1])
@@ -108,8 +112,10 @@ def login(email, password):
             login_error_label.configure(text=clean_text, text_color='#FF4444')
         except Exception as e:
             login_error_label.configure(text='An unknown error occurred during login.', text_color='#FF4444')
+
 def signup():
-    global user, user_info, signup_email_entry, signup_password_entry, confirm_password_entry, signup_screen, signup_error_label, Check_Verification_Button
+
+    global user, user_info, signup_email_entry, signup_password_entry, confirm_password_entry, signup_screen, signup_error_label, Check_Verification_Button, dulars
     try:
         if signup_password_entry.get() == confirm_password_entry.get():
             user = auth.create_user_with_email_and_password(signup_email_entry.get(), signup_password_entry.get())
@@ -117,8 +123,28 @@ def signup():
             login(signup_email_entry.get(), signup_password_entry.get())
             auth.send_email_verification(user['idToken'])
             signup_error_label.configure(signup_screen, text='Verification email sent. Please verify your email before logging in and make sure to check your spam folder as well.', font = (INTER_FONT, 16), text_color='#44FF44')
+            email = signup_email_entry.get()
+            # --- ISOLATED DB PUSH ---
+            try:
+                request = {
+                    'uid': user['localId'],
+                    'type': 'signup',
+                }
+                db.child('requests').push(request, user['idToken'])
+            except Exception as db_e:
+                print('--- DATABASE ERROR DETAILS START ---')
+                print(f'Error type: {type(db_e)}')
+                print(f'Error message: {db_e}')
+                print('--- DATABASE ERROR DETAILS END ---')
+            try:
+                dulars = int(db.child(email.replace('.', ',')).child("dulars").get(token=user['idToken']).val())
+            except:
+                dulars = "?"
+
+
         else:
             signup_error_label.configure(signup_screen, text='Passwords do not match.', font = (INTER_FONT, 16), text_color='#FF4444')
+            
     except Exception as e:
         try:
             error_json = json.loads(e.args[1])
@@ -134,7 +160,6 @@ def signup():
 def check_ver():
     global user_info, is_verified, signup_error_label, logged_in_screen, Check_Verification_Button, user
     try:
-        user = auth.refresh(user['refreshToken'])
         user_info = auth.get_account_info(user['idToken'])
         is_verified = user_info['users'][0]['emailVerified']
         if is_verified:
@@ -158,15 +183,43 @@ def check_ver():
         except Exception as e:
             signup_error_label.configure(text='An unknown error occurred while checking verification status.', font = (INTER_FONT, 16), text_color='#FF4444')
 
+def send_dulars():
+    global send_dulars_screen, email, logged_in_screen, not_true_verified_label, dulars
+    safe_email = email.replace('.', ',')
+    if db.child(safe_email).get(token = user['idToken']).val():
+        if dulars >=int(Amount_entry.get()):
+            request = {
+                'uid': user['localId'],
+                'type': 'send_dulars',
+                'recipient_email': Recipient_email_entry.get(),
+                'amount': Amount_entry.get()
+            }
+            db.child('requests').push(request, token = user['idToken'])
+            somewhat_success_label = ctk.CTkLabel(send_dulars_screen, text = 'Dulars are in the process of being sent! If this request was invalid the dulars will not be sent. Sending Dulars Can Take Some time', font = (INTER_FONT, 16), text_color='#44FF44')
+            somewhat_success_label.place(relx = 0.5, rely = 0.9, anchor = 's')
+    else:
+        not_true_verified_label = ctk.CTkLabel(send_dulars_screen, text = 'You do not have a true verified account in the database. Please contact support or wait.', font = (INTER_FONT, 16), text_color='#FF4444')
+        not_true_verified_label.place(relx = 0.5, rely = 0.9, anchor = 's')
+        root.after(2000, lambda: not_true_verified_label.configure(text=''))
+
+def check_dulars():
+    global dulars, email
+    try:
+        dulars = int(db.child(email.replace('.', ',')).child("dulars").get(token=user['idToken']).val())
+        dulars_label.configure(text = dulars)
+        dulars_label2.configure(text = dulars)
+    except:
+        dulars = "?"
 #Screens
 home_screen = ctk.CTkFrame(root, fg_color='#121212')
 check_request_id_status_screen = ctk.CTkFrame(root, fg_color='#121212')
 login_screen = ctk.CTkFrame(root, fg_color='#121212')
 signup_screen = ctk.CTkFrame(root, fg_color='#121212')
 logged_in_screen = ctk.CTkFrame(root, fg_color='#121212')
+send_dulars_screen = ctk.CTkFrame(root, fg_color='#121212')
 
 #i again dk what this does but it was in the tutorial so here we are i think it does setup stuff for the screens or smt
-for screen in home_screen, check_request_id_status_screen, login_screen, signup_screen, logged_in_screen:
+for screen in home_screen, check_request_id_status_screen, login_screen, signup_screen, logged_in_screen, send_dulars_screen:
     screen.grid(row=0, column=0, sticky='nsew')
 
 #Home_Screen
@@ -175,12 +228,29 @@ ctk.CTkButton(home_screen, text = 'Login', font = (INTER_FONT, 20), width = 400,
 ctk.CTkButton(home_screen, text = 'Sign Up', font = (INTER_FONT, 20), width = 400, height = 50, corner_radius = 12, command = lambda: show_screen(signup_screen)).pack(pady = (15, 15))
 ctk.CTkLabel(home_screen, text = "Don't have an account? Press Sign Up! Press Login to access an existing account!", font = (INTER_FONT, 16)).pack(pady = (15, 0))
 
-
 #logged_in_screen
-
+chhota_app_icon = ctk.CTkImage(light_image = raw_image, size = (20, 20), dark_image = raw_image)
+icon_label = ctk.CTkLabel(logged_in_screen, image = chhota_app_icon, text = '')
+icon_label.place(relx = 0.01, rely = 0.01, anchor = 'nw')
+dulars_label = ctk.CTkLabel(logged_in_screen, text = dulars, font = (INTER_FONT, 20), text_color='#44FF44')
+dulars_label.place(relx = 0.03, rely = 0.01, anchor = 'nw')
+icon_label2 = ctk.CTkLabel(send_dulars_screen, image = chhota_app_icon, text = '')
+icon_label2.place(relx = 0.01, rely = 0.01, anchor = 'nw')
+dulars_label2 = ctk.CTkLabel(send_dulars_screen, text = dulars, font = (INTER_FONT, 20), text_color='#44FF44')
+dulars_label2.place(relx = 0.03, rely = 0.01, anchor = 'nw')
 ctk.CTkLabel(logged_in_screen, text = 'Welcome to Dular Land Bank!', font = (INTER_FONT, 60, 'bold'), text_color='#FFFFFF').pack(pady = 20)
 ctk.CTkButton(logged_in_screen, text = 'Logout', font = (INTER_FONT, 20), width = 400, height = 50, corner_radius = 12, command = lambda: logout()).pack(pady = 20, expand = True)
-
+ctk.CTkButton(logged_in_screen, text = 'Send Dulars', font = (INTER_FONT, 20), width = 400, height = 50, corner_radius = 12, command = lambda: show_screen(send_dulars_screen)).pack(pady = 20, expand = True)
+reload_dulars_button = ctk.CTkButton(logged_in_screen, text = '🔄️', font = (INTER_FONT, 20), width = 120, height = 25, corner_radius = 12, command = lambda: check_dulars())
+reload_dulars_button2 = ctk.CTkButton(send_dulars_screen, text = '🔄️', font = (INTER_FONT, 20), width = 120, height = 25, corner_radius = 12, command = lambda: check_dulars())
+reload_dulars_button.place(relx = 0.1, rely = 0, anchor = 'n')
+reload_dulars_button2.place(relx = 0.1, rely = 0, anchor = 'n')
+#send dulars screen
+Recipient_email_entry = ctk.CTkEntry(send_dulars_screen, placeholder_text = 'Recipient Email', font = (INTER_FONT, 20), width = 400, height = 50)
+Amount_entry = ctk.CTkEntry(send_dulars_screen, placeholder_text = 'Amount', font = (INTER_FONT, 20), width = 400, height = 50)
+ctk.CTkButton(send_dulars_screen, text = 'Send', font = (INTER_FONT, 20), fg_color = '#FF0000', hover_color='#CC0000', width = 200, height = 50,corner_radius = 12 ,command = lambda: send_dulars()).pack(pady = 20, expand = True)
+Recipient_email_entry.pack(pady = (20, 15))
+Amount_entry.pack(pady = (15, 20))
 
 #MAGIC
 id_entry = ctk.CTkEntry(check_request_id_status_screen, placeholder_text = 'Request ID', font = (INTER_FONT, 20), width = 400, height = 50)
@@ -222,13 +292,13 @@ Check_Verification_Button.pack(pady = (15, 20))
 ctk.CTkButton(check_request_id_status_screen, text = 'Back', font = (INTER_FONT, 20), width = 200, height = 50, command = lambda: show_screen(logged_in_screen)).pack(pady = 20, expand = True)
 ctk.CTkButton(login_screen, text = 'Back', font = (INTER_FONT, 20), width = 200, height = 50, command = lambda: show_screen(home_screen)).pack(pady = 20, expand = True)
 ctk.CTkButton(signup_screen, text = 'Back', font = (INTER_FONT, 20), width = 200, height = 50, command = lambda: show_screen(home_screen)).pack(pady = 20, expand = True)
-
+ctk.CTkButton(send_dulars_screen, text = 'Back', font = (INTER_FONT, 20), width = 200, height = 50, command = lambda: show_screen(logged_in_screen)).pack(pady = 20, expand = True)
 #f5/fn+f5
 show_screen(home_screen)
 
 #wait... contact support stuff ugh... i most probably wont respond but i think i should add it for showcase
-for custom in home_screen, login_screen, signup_screen, logged_in_screen:
-    support_label = ctk.CTkLabel(custom, text='Support: (enter support contact here uh)', font=(INTER_FONT, 13, 'bold'), text_color='#757575', fg_color='#121212')
+for custom in home_screen, login_screen, signup_screen, logged_in_screen, send_dulars_screen:
+    support_label = ctk.CTkLabel(custom, text='Support: dularsupport@gmail.com', font=(INTER_FONT, 13, 'bold'), text_color='#757575', fg_color='#121212')
     support_label.place(relx=0.98, rely=0.98, anchor='se')
 
 
