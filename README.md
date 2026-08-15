@@ -9,7 +9,7 @@ I am a beginner at coding so the code may not reflect the best industry practice
 ## Prerequisites
 * Python 3.11+
 * Internet Connection
-* Email
+* EmAIl
 
 ### Create a virtual environment (if you are going to download the source code):
 Run `python3 -m venv .venv` first to create the virtual environment.
@@ -41,9 +41,15 @@ If you want to run the source code directly or are on MacOS/Linux then download 
 If you prefer to run the application directly from the source code (or are using macOS/Linux), follow these steps:
 
 1. **Download and Extract:** Download the repository as a ZIP file and extract it to your preferred location.
-2. **Install Dependencies:** Open your terminal, navigate into the project folder (the one containing `DularLandBankPrototype.py`), and run:
+2. **Install Dependencies:** Open your terminal, navigate into the project folder (the one contAIning `DularLandBankPrototype.py`), and run:
    ```bash
    pip install -r requirements.txt
 3. Without exitting the terminal, still in the same folder run:
       ```bash
    python DularLandBankPrototype.py
+
+**Confession:**
+Here are the places i used AI in, minimal AI in the source code, though used quite a lot for doubts since i am new to coding and also in the resource path function the PIL library and everything in the json library, in the future, possibly also quite alot of AI used for writing the Firebase RTDB Rules...
+everything inside .github since i didnt want to learn that and wanted to focus on the mAIn project instead
+quite a bit inside this README.md, also IN EVERY SINGLE COMMIT MESSAGE AND DESCRIPTION THERE IS...
+I do apologize for these AI uses and i will try to minimize AI used in the future or at least not overuse it, till the point where its no longer human! heh...
