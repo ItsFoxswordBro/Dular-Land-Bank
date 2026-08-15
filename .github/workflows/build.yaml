@@ -32,7 +32,7 @@ jobs:
           --add-data "icon.png:." \
           --add-data "Inter-Italic-VariableFont_opsz,wght.ttf:." \
           --add-data "Inter-VariableFont_opsz,wght.ttf:." \
-          main.py
+          DularLandBank.py
 
     - name: Zip the output file
       run: |
