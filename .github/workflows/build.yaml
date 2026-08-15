@@ -1,43 +1,46 @@
-name: Build and Release Windows EXE
+name: Build macOS Executable
 
+# This disables automatic builds on push. 
+# It will ONLY run when you manually click "Run workflow" on GitHub.com.
 on:
-  push:
-    tags:
-      - 'v*.*.*'  # Triggers when you create a release tag (e.g., v1.0.0)
-  workflow_dispatch: # Allows you to manually trigger it from GitHub anytime
+  workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: windows-latest
-    permissions:
-      contents: write # Required permission to publish Releases
+  build-mac:
+    runs-on: macos-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout repository code
+      uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.14.6'
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pyinstaller
-          if (Test-Path requirements.txt) { pip install -r requirements.txt }
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller Pillow
+        # Add any other libraries your app uses below this line (e.g. pip install custom_library)
 
-      - name: Build EXE with Assets
-        # Note: Use --add-data "sourceFolder;targetFolder" on Windows!
-        # Update/add folders as needed (e.g. assets, images, config.json)
-        run: |
-          pyinstaller --onefile --noconsole `
-            --add-data "assets;assets" `
-            DularLandBankPrototype.py
+    - name: Build Mac Executable
+      run: |
+        pyinstaller --onefile --windowed \
+          --name="DularLandBank" \
+          --icon="icon.png" \
+          --add-data "icon.png:." \
+          --add-data "Inter-Italic-VariableFont_opsz,wght.ttf:." \
+          --add-data "Inter-VariableFont_opsz,wght.ttf:." \
+          main.py
 
-      - name: Create GitHub Release and Attach EXE
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: dist/main.exe
-          generate_release_notes: true
+    - name: Zip the output file
+      run: |
+        cd dist
+        zip -r DularLandBank-macOS.zip DularLandBank.app
+
+    - name: Upload zip file as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: DularLandBank-macOS
+        path: dist/DularLandBank-macOS.zip
