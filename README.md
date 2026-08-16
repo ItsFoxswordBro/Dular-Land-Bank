@@ -9,7 +9,7 @@ I am a beginner at coding so the code may not reflect the best industry practice
 ## Prerequisites
 * Python 3.11+
 * Internet Connection
-* EmAIl
+* Email
 
 ### Create a virtual environment (if you are going to download the source code):
 **On Windows**
