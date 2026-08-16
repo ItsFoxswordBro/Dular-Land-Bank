@@ -1,8 +1,8 @@
 # UI Framework
-customtkinter==5.2.2
+customtkinter==6.0.0
 
 # Firebase integration
 pyrebase4==4.9.0
 
 # Image processing
-Pillow==12.2.0
+Pillow==12.3.0
