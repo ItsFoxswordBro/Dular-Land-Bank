@@ -7,7 +7,7 @@ I am a beginner at coding so the code may not reflect the best industry practice
 ---
 
 ## Prerequisites
-* Python 3.11+
+* Python 3.14+
 * Internet Connection
 * Email
 
