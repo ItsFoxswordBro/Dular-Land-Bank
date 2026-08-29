@@ -8,6 +8,7 @@ import sys
 import os
 import tkinter.font as tkfont
 
+#helper function for binary files
 def resource_path(relative_path):
     try:
         base_path = sys._MEIPASS
@@ -15,6 +16,7 @@ def resource_path(relative_path):
         base_path = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base_path, relative_path)
 
+#Make inter font exist as it is not a default font and i want it to be used in the app
 def register_inter_font():
     try:
         path = resource_path('Inter-VariableFont_opsz,wght.ttf')
@@ -24,7 +26,7 @@ def register_inter_font():
         print(f'Error loading custom font: {e}')
     return
 
-#Pyrebase setup config thing
+#Pyrebase4 setup config
 config = {
     'apiKey': 'AIzaSyDG_BcyP-8gmey_DDkbPcSULMM8AVfehD8',
     'authDomain': 'py-base-test.firebaseapp.com',
@@ -32,13 +34,13 @@ config = {
     'storageBucket': 'py-base-test.firebasestorage.app',
 }
 
-#More Setup(Real Setup for the Pyrebase stuff)
+#Intialize Pyrebase4 Essential Variables
 firebase = pyrebase.initialize_app(config)
 auth = firebase.auth()
 db = firebase.database()
 is_verified = False
 
-#More Setup? idk
+#Setup for CustomTkinter
 root = ctk.CTk()
 title = 'Dular Land Bank'
 root.after(200, lambda: root.title(title))
@@ -48,23 +50,19 @@ App_icon = ctk.CTkImage(light_image=raw_image, dark_image=raw_image, size=(root.
 window_bar_icon = ImageTk.PhotoImage(raw_image)
 root.after(200, lambda: root.iconphoto(False, window_bar_icon))
 INTER_FONT = register_inter_font()
-dulars = 0
-#idk what this does but it was in the tutorial so here we are i think it fills stuff to the screen or smt
+dulars = '?'
+#i have unfortunately forgotten what this does
 root.grid_rowconfigure(0, weight=1)
 root.grid_columnconfigure(0, weight=1)
 
-#Set Appearance also if you choose light you're wrong
+#Set Appearance also if you choose light you're wrong, i will have to add light mode support later in settings -> accessibility tho
 root.configure(fg_color='#121212')
 
-#shifts stuff layering thing
+#Screen Layering, but really showing
 def show_screen(screen):
     screen.tkraise()
 
-#function for no yo army
-
-
-
-#self explanatory stuff
+#FUNCTIONS(juicy part)
 def logout():
     global home_screen
     try:
@@ -97,7 +95,7 @@ def login(email2, password):
             email = email2
             login_error_label.configure(text='Email not verified or credentials not entered, if you cant find the email to verify your account, please check in your spam folder as well or please wait 3-7 days and try again. or contact support.', text_color='#FF4444')
         try:
-            dulars = int(db.child(email.replace('.', ',')).child("dulars").get(token=user['idToken']).val())
+            dulars = float(db.child('users').child(email.replace('.', ',')).child("dulars").get(token=user['idToken']).val())
         except:
             dulars = "?"
 
@@ -115,7 +113,7 @@ def login(email2, password):
 
 def signup():
 
-    global user, user_info, signup_email_entry, signup_password_entry, confirm_password_entry, signup_screen, signup_error_label, Check_Verification_Button, dulars
+    global user, user_info, signup_email_entry, signup_password_entry, confirm_password_entry, signup_screen, signup_error_label, Check_Verification_Button, dulars, email
     try:
         if signup_password_entry.get() == confirm_password_entry.get():
             user = auth.create_user_with_email_and_password(signup_email_entry.get(), signup_password_entry.get())
@@ -125,10 +123,11 @@ def signup():
             signup_error_label.configure(signup_screen, text='Verification email sent. Please verify your email before logging in and make sure to check your spam folder as well.', font = (INTER_FONT, 16), text_color='#44FF44')
             email = signup_email_entry.get()
             # --- ISOLATED DB PUSH ---
-            try:
+            try:    
                 request = {
                     'uid': user['localId'],
                     'type': 'signup',
+                    'email': email
                 }
                 db.child('requests').push(request, user['idToken'])
             except Exception as db_e:
@@ -137,7 +136,7 @@ def signup():
                 print(f'Error message: {db_e}')
                 print('--- DATABASE ERROR DETAILS END ---')
             try:
-                dulars = int(db.child(email.replace('.', ',')).child("dulars").get(token=user['idToken']).val())
+                dulars = float(db.child('users').child(email.replace('.', ',')).child("dulars").get(token=user['idToken']).val())
             except:
                 dulars = "?"
 
@@ -186,13 +185,14 @@ def check_ver():
 def send_dulars():
     global send_dulars_screen, email, logged_in_screen, not_true_verified_label, dulars
     safe_email = email.replace('.', ',')
-    if db.child(safe_email).get(token = user['idToken']).val():
-        if dulars >=int(Amount_entry.get()):
+    if db.child('users').child(safe_email).get(token = user['idToken']).val():
+        if 0 < float(dulars) >=float(Amount_entry.get()):
             request = {
                 'uid': user['localId'],
                 'type': 'send_dulars',
                 'recipient_email': Recipient_email_entry.get(),
-                'amount': Amount_entry.get()
+                'amount': float(Amount_entry.get()),
+                'email': email.replace('.', ',')
             }
             db.child('requests').push(request, token = user['idToken'])
             somewhat_success_label = ctk.CTkLabel(send_dulars_screen, text = 'Dulars are in the process of being sent! If this request was invalid the dulars will not be sent. Sending Dulars Can Take Some time', font = (INTER_FONT, 16), text_color='#44FF44')
@@ -205,21 +205,23 @@ def send_dulars():
 def check_dulars():
     global dulars, email
     try:
-        dulars = int(db.child(email.replace('.', ',')).child("dulars").get(token=user['idToken']).val())
+        dulars = float(db.child('users').child(email.replace('.', ',')).child("dulars").get(token=user['idToken']).val())
         dulars_label.configure(text = dulars)
         dulars_label2.configure(text = dulars)
     except:
         dulars = "?"
+        dulars_label.configure(text = dulars)
+        dulars_label2.configure(text = dulars)
+
 #Screens
 home_screen = ctk.CTkFrame(root, fg_color='#121212')
-check_request_id_status_screen = ctk.CTkFrame(root, fg_color='#121212')
 login_screen = ctk.CTkFrame(root, fg_color='#121212')
 signup_screen = ctk.CTkFrame(root, fg_color='#121212')
 logged_in_screen = ctk.CTkFrame(root, fg_color='#121212')
 send_dulars_screen = ctk.CTkFrame(root, fg_color='#121212')
 
-#i again dk what this does but it was in the tutorial so here we are i think it does setup stuff for the screens or smt
-for screen in home_screen, check_request_id_status_screen, login_screen, signup_screen, logged_in_screen, send_dulars_screen:
+#i have unfortunately forgotten what this does
+for screen in home_screen, login_screen, signup_screen, logged_in_screen, send_dulars_screen:
     screen.grid(row=0, column=0, sticky='nsew')
 
 #Home_Screen
@@ -252,13 +254,6 @@ ctk.CTkButton(send_dulars_screen, text = 'Send', font = (INTER_FONT, 20), fg_col
 Recipient_email_entry.pack(pady = (20, 15))
 Amount_entry.pack(pady = (15, 20))
 
-#MAGIC
-id_entry = ctk.CTkEntry(check_request_id_status_screen, placeholder_text = 'Request ID', font = (INTER_FONT, 20), width = 400, height = 50)
-id_entry.pack(pady = 20, expand = True) 
-
-#check_request_id_status_screen
-ctk.CTkButton(check_request_id_status_screen, text = 'Check Status', font = (INTER_FONT, 20), fg_color = '#FF0000', hover_color='#CC0000', width = 200, height = 50,corner_radius = 12 ,command = lambda: check_ver()).pack(pady = 20, expand = True)
-
 #login screen
 login_email_entry = ctk.CTkEntry(login_screen, placeholder_text = 'Email', font = (INTER_FONT, 20), width = 400, height = 50)
 login_password_entry = ctk.CTkEntry(login_screen, placeholder_text = 'Password', font = (INTER_FONT, 20), width = 400, height = 50, show = '*')
@@ -267,10 +262,6 @@ login_password_entry.pack(pady = (15, 20))
 login_error_label = ctk.CTkLabel(login_screen, text = '', font = (INTER_FONT, 16))
 login_error_label.pack(pady = 10)
 ctk.CTkButton(login_screen, text = 'Login', font = (INTER_FONT, 20), width = 200, height = 50, command = lambda: login(login_email_entry.get(), login_password_entry.get())).pack(pady = 30)
-
-#label for the status message stuff
-status_msg_label = ctk.CTkLabel(check_request_id_status_screen, text = '', font = (INTER_FONT, 20))
-status_msg_label.pack(pady = 20, expand = True)
 
 #signup screen
 signup_email_entry = ctk.CTkEntry(signup_screen, placeholder_text = 'Email', font = (INTER_FONT, 20), width = 400, height = 50)
@@ -288,15 +279,15 @@ Check_Verification_Button.pack(pady = (15, 20))
 
 
 
-#i forgot to add back buttons so here we are
-ctk.CTkButton(check_request_id_status_screen, text = 'Back', font = (INTER_FONT, 20), width = 200, height = 50, command = lambda: show_screen(logged_in_screen)).pack(pady = 20, expand = True)
+#Back Buttons(idk why bundled together)
 ctk.CTkButton(login_screen, text = 'Back', font = (INTER_FONT, 20), width = 200, height = 50, command = lambda: show_screen(home_screen)).pack(pady = 20, expand = True)
 ctk.CTkButton(signup_screen, text = 'Back', font = (INTER_FONT, 20), width = 200, height = 50, command = lambda: show_screen(home_screen)).pack(pady = 20, expand = True)
 ctk.CTkButton(send_dulars_screen, text = 'Back', font = (INTER_FONT, 20), width = 200, height = 50, command = lambda: show_screen(logged_in_screen)).pack(pady = 20, expand = True)
-#f5/fn+f5
+
+#Show Home Screen on Startup
 show_screen(home_screen)
 
-#wait... contact support stuff ugh... i most probably wont respond but i think i should add it for showcase
+#Contact Support Stuff(useless but i want it to be there)
 for custom in home_screen, login_screen, signup_screen, logged_in_screen, send_dulars_screen:
     support_label = ctk.CTkLabel(custom, text='Support: dularsupport@gmail.com', font=(INTER_FONT, 13, 'bold'), text_color='#757575', fg_color='#121212')
     support_label.place(relx=0.98, rely=0.98, anchor='se')
